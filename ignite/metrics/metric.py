@@ -547,7 +547,7 @@ def sync_all_reduce(*attrs: Any) -> Callable:
                             if op not in valid_ops:
                                 raise ValueError(f"Reduction operation is not valid (expected : {valid_ops}, got: {op}")
                             op_kwargs["op"] = op
-                        t = getattr(self, attr, None)
+                        t = getattr(self, attr)
                         if callable(t):
                             setattr(self, "sync_all_reduce_function_result", t())
                             t = getattr(self, "sync_all_reduce_function_result", None)

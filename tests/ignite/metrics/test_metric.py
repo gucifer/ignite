@@ -620,6 +620,7 @@ def _test_distrib_sync_all_reduce_decorator(device):
             self.prod = torch.tensor([2.0, 3.0], device=self._device, requires_grad=False)
             self.prod_nocomp = self.prod.clone().to("cpu")
 
+        @reinit__is_reduced
         def dummy_function(self):
             return 1
 
