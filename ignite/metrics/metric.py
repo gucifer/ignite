@@ -548,6 +548,9 @@ def sync_all_reduce(*attrs: Any) -> Callable:
                                 raise ValueError(f"Reduction operation is not valid (expected : {valid_ops}, got: {op}")
                             op_kwargs["op"] = op
                         t = getattr(self, attr, None)
+                        if callable(t):
+                            setattr(self, "sync_all_reduce_function_result", t())
+                            t = getattr(self, "sync_all_reduce_function_result", None)
                         if t is not None:
                             t = idist.all_reduce(t, **op_kwargs)
                             self._is_reduced = True
