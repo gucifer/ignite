@@ -594,7 +594,9 @@ def _test_invalid_sync_all_reduce(device):
 
 
 def _test_distrib_sync_all_reduce_decorator(device):
+
     class DummyMetric(Metric):
+
         @reinit__is_reduced
         def reset(self):
             # SUM op
@@ -620,11 +622,10 @@ def _test_distrib_sync_all_reduce_decorator(device):
             self.prod = torch.tensor([2.0, 3.0], device=self._device, requires_grad=False)
             self.prod_nocomp = self.prod.clone().to("cpu")
 
-        @reinit__is_reduced
-        def dummy_function(self):
-            return 1
+        def fun(self):
+            return 2 * self.a
 
-        @sync_all_reduce("a", "b", "c", "n:SUM", "m:MAX", "k:MIN", "prod:PRODUCT", "dummy_function")
+        @sync_all_reduce("a", "b", "c", "n:SUM", "m:MAX", "k:MIN", "prod:PRODUCT", "fun")
         def compute(self):
             assert (self.a.cpu() == (self.a_nocomp + 10) * idist.get_world_size()).all()
             assert (self.b.cpu() == (self.b_nocomp - 5) * idist.get_world_size()).all()
@@ -632,10 +633,10 @@ def _test_distrib_sync_all_reduce_decorator(device):
             assert self.n == (self.n_nocomp + 1) * idist.get_world_size()
             assert self.m == self.num_updates * (idist.get_world_size() - 1) - 1
             assert self.k == 10000 - self.num_updates * (idist.get_world_size() - 1)
-            assert self.sync_all_reduce_function_result == pytest.approx(idist.get_world_size())
             temp_prod_nocomp = 5 * self.prod_nocomp  # new variable for the recomputing
             temp_prod_nocomp = temp_prod_nocomp.pow(idist.get_world_size())
             assert (self.prod.cpu() == temp_prod_nocomp).all()
+            assert (self.fun.result.cpu() == 4 * self.a.cpu()).all()
 
         @reinit__is_reduced
         def update(self, output):

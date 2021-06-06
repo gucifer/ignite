@@ -538,24 +538,27 @@ def sync_all_reduce(*attrs: Any) -> Callable:
                 )
             ws = idist.get_world_size()
             if len(attrs) > 0 and not self._is_reduced:
-                if ws > 1:
-                    for attr in attrs:
-                        op_kwargs = {}
-                        if ":" in attr:
-                            attr, op = attr.split(":")
-                            valid_ops = ["MIN", "MAX", "SUM", "PRODUCT"]
-                            if op not in valid_ops:
-                                raise ValueError(f"Reduction operation is not valid (expected : {valid_ops}, got: {op}")
-                            op_kwargs["op"] = op
-                        t = getattr(self, attr)
-                        if callable(t):
-                            setattr(self, "sync_all_reduce_function_result", t())
-                            t = getattr(self, "sync_all_reduce_function_result", None)
-                        if t is not None:
-                            t = idist.all_reduce(t, **op_kwargs)
+                for attr in attrs:
+                    op_kwargs = {}
+                    if ":" in attr:
+                        attr, op = attr.split(":")
+                        valid_ops = ["MIN", "MAX", "SUM", "PRODUCT"]
+                        if op not in valid_ops:
+                            raise ValueError(f"Reduction operation is not valid (expected : {valid_ops}, got: {op}")
+                        op_kwargs["op"] = op
+                    t = getattr(self, attr)
+                    is_callable = callable(t)
+                    if is_callable:
+                        v = t()
+                        if v is not None and ws > 1:
+                            v = idist.all_reduce(v, **op_kwargs)
                             self._is_reduced = True
-                            setattr(self, attr, t)
-                else:
+                        t.__func__.result = v
+                    elif t is not None and ws > 1:
+                        t = idist.all_reduce(t, **op_kwargs)
+                        self._is_reduced = True
+                        setattr(self, attr, t)
+                if ws <= 1:
                     self._is_reduced = True
 
             return func(self, *args, **kwargs)
