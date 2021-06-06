@@ -594,9 +594,7 @@ def _test_invalid_sync_all_reduce(device):
 
 
 def _test_distrib_sync_all_reduce_decorator(device):
-
     class DummyMetric(Metric):
-
         @reinit__is_reduced
         def reset(self):
             # SUM op
